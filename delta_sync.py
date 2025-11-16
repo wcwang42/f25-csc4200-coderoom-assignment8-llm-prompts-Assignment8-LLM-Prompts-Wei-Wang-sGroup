@@ -5,7 +5,8 @@ Used by prompt_node.py with udp_overlay.py
 """
 
 import os, io, torch, hashlib, tempfile, time
-from udp_overlay import BROADCAST_IP, PORT
+from udp_overlay import PeerNode, BROADCAST_IP, PORT
+from update_exchanges import announce_model_meta, fragment_and_send, handle_incoming_chunk, receive_and_reassemble
 
 
 # ---------- create and send deltas ----------
@@ -26,32 +27,34 @@ def export_delta(model, threshold=1e-6):
     return tmp.name, sha, size
 
 
+
 def broadcast_delta(node, path, sha, size):
-    """Announce and send a delta file over the overlay."""
-    ver = f"v{int(time.time())}"
-    chunks = 1
-    node._announce_model_meta(ver, size, chunks, sha)
-    data = open(path, "rb").read()
-    node._send_model_chunk(ver, 0, chunks, data, (BROADCAST_IP, PORT))
-    print(f"[SEND] delta {ver} ({size} B) broadcasted")
-    os.remove(path)
+    """
+    broadcast your message delta
+    """
+    raise NotImplementedError("TODO: implement broadcast delta.")
 
 
-# ---------- receive and apply deltas ----------
+def reassemble_delta(node: PeerNode, ver: str):
+    """
+    reassemble your delta before you pass it to apply incoming delta
+    """
+    raise NotImplementedError("TODO: implement reassembly and SHA verification logic.")
+
+
+
 def apply_incoming_deltas(node, model, merge_weight=1.0):
-    """Check node._model_buffers for complete deltas and merge them."""
     merged = 0
-    for ver, buf in list(node._model_buffers.items()):
-        total, parts, sha = buf["total"], buf["parts"], buf["sha256"]
-        if len(parts) < total:
-            continue  # still waiting
 
-        # reassemble and verify SHA
-        data = b"".join(parts[i] for i in sorted(parts))
-        sha_local = hashlib.sha256(data).hexdigest()
-        if sha_local != sha:
-            print(f"[WARN] SHA mismatch for {ver}")
+    for ver, buf in list(node._model_buffers.items()):
+        last_idx  = buf.get("_last_idx", 0)
+        last_total = buf["total"]
+
+
+        data = reassemble_delta(node, ver)
+        if data is None:
             continue
+
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pt")
         tmp.write(data)
@@ -61,20 +64,23 @@ def apply_incoming_deltas(node, model, merge_weight=1.0):
             delta = torch.load(tmp.name, map_location="cpu", weights_only=False)
             sd = model.state_dict()
             applied = 0
+
             for k, v in delta.items():
                 if k in sd and sd[k].shape == v.shape:
                     sd[k] = sd[k] + (merge_weight * v.to(sd[k].dtype))
                     applied += 1
+
             model.load_state_dict(sd)
-            torch.save(model.state_dict(), "base.pt")   # persist new base
-            merged += 1
+            torch.save(model.state_dict(), "base.pt")
             print(f"[MERGE] model {ver} applied ✓ ({applied} layers)")
+            merged += 1
+
         except Exception as e:
             print(f"[ERROR] failed to merge {ver}: {e}")
+
         finally:
             os.remove(tmp.name)
+            node._model_buffers.pop(ver, None)
 
-        # clear buffer
-        node._model_buffers.pop(ver, None)
     return merged
 

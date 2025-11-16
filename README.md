@@ -14,7 +14,42 @@ Each Raspberry Pi will run a lightweight language model, participate in a UDP-ba
 Your primary responsibility is to implement the **networking mechanisms** that enable model deltas to be transmitted, received, verified, and merged.
 The machine-learning components are provided for you and must not be modified.
 
-This assignment builds directly on the previous overlay labs and extends your system into a federated learning environment.
+This assignment builds directly on the previous overlay labs and extends your system into a federated learning environment. Use the message format from your previous assignment (Sprint 6.2).
+
+Here is how it should work:
+
+```
+prompt_node.py
+    ↓
+delta_sync.py
+    ↓
+update_exchanges.py
+    ↓
+udp_overlay.py
+```
+
+## Chaining of files/modules/functions
+
+# Dependency Chain
+
+```text
+prompt_node.py
+    imports udp_overlay.PeerNode, BROADCAST_IP, PORT
+    imports delta_sync.export_delta, broadcast_delta, apply_incoming_deltas
+
+delta_sync.py
+    imports udp_overlay.PeerNode, BROADCAST_IP, PORT
+    imports update_exchanges.announce_model_meta
+    imports update_exchanges.fragment_and_send
+    imports update_exchanges.handle_incoming_chunk
+    imports update_exchanges.receive_and_reassemble
+
+update_exchanges.py
+    imports udp_overlay.PeerNode, BROADCAST_IP, PORT
+
+udp_overlay.py
+    imports base libs only (base64, socket, threading, time, typing)
+```
 
 ---
 
@@ -128,6 +163,7 @@ You must:
 * Create a version identifier.
 * Compute the number of UDP-safe fragments needed for the delta file.
 * Announce the delta to all peers using the provided metadata function.
+* Use message format from Sprint 6.2.
 * Fragment the binary delta file into pieces that fit within the overlay’s maximum payload size.
 * Base64-encode each fragment so that it can be transmitted as text.
 * Send each fragment using the overlay’s `_send_model_chunk()` interface.

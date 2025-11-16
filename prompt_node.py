@@ -115,7 +115,7 @@ def background_merge(node, model):
 
 # ---------- main interactive loop ----------
 def main(node_id, debug=False):
-    node = PeerNode(node_id, debug=debug)
+    node = PeerNode(node_id)
     node.start()
     model, tok = load_model()
 
