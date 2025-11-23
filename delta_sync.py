@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
 delta_sync.py — model-delta creation, broadcast and merge helpers
-Used by prompt_node.py with udp_overlay.py
+Used by prompt_node.py together with udp_overlay.py
 """
 
-import os, io, torch, hashlib, tempfile, time
-from udp_overlay import PeerNode, PORT
-from update_exchanges import (
-    announce_model_meta,
-    fragment_and_send,
-    handle_incoming_chunk,
-    receive_and_reassemble,
-)
+import os
+import io
+import base64
+import torch
+import hashlib
+import tempfile
+import time
+from udp_overlay import PeerNode   # only this import is required
 
-# ---------- create and send deltas ----------
+
+# ------------------------------------------------------------
+#  export a model delta (already provided for you)
+# ------------------------------------------------------------
 def export_delta(model, threshold=1e-6):
     """Compute sparse delta from current weights vs base.pt."""
     base = torch.load("base.pt", map_location="cpu")
@@ -32,45 +35,39 @@ def export_delta(model, threshold=1e-6):
 
 
 # ------------------------------------------------------------
-#  broadcast your delta update to all peers
+#  broadcast a delta file using PeerNode’s built‑in overlay
 # ------------------------------------------------------------
 def broadcast_delta(node: PeerNode, path: str, sha: str, size: int):
     """
-    Broadcast the delta file to all peers in UDP-safe chunks.
-    Announce metadata, then call your overlay’s fragmentation API.
+    Announce and broadcast a model delta file to all peers.
+    Uses PeerNode’s internal announce_model_meta() and
+    broadcast_file_to_all_peers() methods.
     """
-    # 1. Construct version identifier based on timestamp
     version = f"delta_v{int(time.time())}"
-
-    # 2. Compute total chunks
-    total_chunks = (size + node.MAX_UDP - 1) // node.MAX_UDP if hasattr(node, "MAX_UDP") else (
-        (size + 44000 - 1) // 44000
-    )
+    total_chunks = (size + node.MAX_UDP - 1) // node.MAX_UDP
 
     print(f"[INIT] Created delta {version} ({size} bytes, {total_chunks} chunks)")
     print(f"[META] Announcing delta {version} ...")
 
-    # 3. Announce metadata to all peers
-    announce_model_meta(node, version, size, total_chunks, sha)
+    # 1. Announce metadata so peers prepare buffers
+    node.announce_model_meta(version, size, total_chunks, sha)
 
-    # 4. Delay briefly to give peers time to register the metadata
+    # 2. Short delay so listeners register META before chunks arrive
     time.sleep(1)
 
-    # 5. Actually send the file to peers
-    # Use helper fragment_and_send provided by update_exchanges.py
-    count = fragment_and_send(node, version, path)
-
+    # 3. Send the actual file in fragments
+    count = node.broadcast_file_to_all_peers(version, path)
     print(f"[BROADCAST] Delta {version} sent to {count} peer(s)")
     return version
 
 
 # ------------------------------------------------------------
-#  Reassemble an incoming delta from its chunks
+#  Reassemble all received chunks for a delta version
 # ------------------------------------------------------------
 def reassemble_delta(node: PeerNode, ver: str):
     """
-    Reassemble all received chunks of a given version,
-    verify its SHA256 hash, and return the binary data (bytes) if valid.
+    Reassemble the binary data for a given version from node._model_buffers,
+    verify its SHA256, optionally save to disk, and return the raw bytes.
     """
     if ver not in node._model_buffers:
         print(f"[WARN] reassemble_delta: no buffer for {ver}")
@@ -79,70 +76,57 @@ def reassemble_delta(node: PeerNode, ver: str):
     buf = node._model_buffers[ver]
     total = buf["total"]
     parts = buf["parts"]
-    sha_expected = buf.get("sha256", None)
+    sha_expected = buf.get("sha256")
 
-    # Verify all chunks are present
     if len(parts) < total:
-        print(f"[REASSEMBLE] {ver}: incomplete ({len(parts)}/{total}) — waiting for more")
+        print(f"[REASSEMBLE] {ver}: incomplete ({len(parts)}/{total}) — waiting")
         return None
 
     print(f"[REASSEMBLE] Starting reassembly for {ver} ({total} chunks)")
-
-    # Reassemble binary and verify SHA
-    reassembled = b""
-    for i in range(total):
-        if i not in parts:
-            print(f"[ERROR] Missing chunk {i} for {ver}")
-            return None
-        try:
-            chunk_data = parts[i]
-            chunk_bytes = base64.b64decode(chunk_data)
-            reassembled += chunk_bytes
-        except Exception as e:
-            print(f"[ERROR] Failed to decode chunk {i}: {e}")
-            return None
-
+    reassembled = b''.join(base64.b64decode(parts[i]) for i in range(total) if i in parts)
     sha_actual = hashlib.sha256(reassembled).hexdigest()
+
     if sha_expected:
         if sha_actual != sha_expected:
-            print(f"[ERROR] SHA mismatch for {ver}\n  Expected: {sha_expected}\n  Actual:   {sha_actual}")
+            print(f"[ERROR] SHA mismatch for {ver}")
+            print(f"  Expected: {sha_expected}")
+            print(f"  Computed: {sha_actual}")
             return None
         else:
             print(f"[OK] SHA verified for {ver}")
 
-    # (Optional) Save this delta to disk for inspection
+    # Save the reassembled delta for record
     try:
-        output_dir = os.path.join(os.getcwd(), "received_deltas")
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, f"{ver}.pt")
-        with open(path, "wb") as out:
-            out.write(reassembled)
+        os.makedirs("received_deltas", exist_ok=True)
+        path = os.path.join("received_deltas", f"{ver}.pt")
+        with open(path, "wb") as f:
+            f.write(reassembled)
         print(f"[SAVE] Delta {ver} saved to {path}")
     except Exception as e:
-        print(f"[WARN] Could not save delta {ver}: {e}")
+        print(f"[WARN] Could not save {ver}: {e}")
 
     print(f"[TEST DONE] ✔ All fragments received and verified for {ver}")
     return reassembled
 
 
 # ------------------------------------------------------------
-#  Apply incoming deltas
+#  Merge any verified incoming deltas into the model
 # ------------------------------------------------------------
 def apply_incoming_deltas(node: PeerNode, model, merge_weight=1.0):
+    """
+    Inspect node._model_buffers for any fully received deltas,
+    verify, merge them into the local model, and remove from buffer.
+    """
     merged = 0
 
     for ver, buf in list(node._model_buffers.items()):
-        # Skip if incomplete or already merged
-        total = buf["total"]
-        parts = buf["parts"]
-        if len(parts) < total:
+        if len(buf["parts"]) < buf["total"]:
             continue
 
         data = reassemble_delta(node, ver)
         if data is None:
             continue
 
-        # Write data into a temp PT file to load with torch
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pt")
         tmp.write(data)
         tmp.close()
@@ -164,6 +148,7 @@ def apply_incoming_deltas(node: PeerNode, model, merge_weight=1.0):
 
         except Exception as e:
             print(f"[ERROR] failed to merge {ver}: {e}")
+
         finally:
             os.remove(tmp.name)
             node._model_buffers.pop(ver, None)
