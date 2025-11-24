@@ -141,7 +141,7 @@ class PeerNode:
         """Broadcast [PEER_SYNC] message to announce presence."""
         body = f"{self.ip},{self.port}"
         packet = self._make_packet("PEER_SYNC", body)
-        print(f"[SYNC] Broadcasting: {packet}")
+        # print(f"[SYNC] Broadcasting: {packet}") COMMENTED OUT
         self._send(packet, (self.broadcast_ip, PORT))
         
         with self.lock:
@@ -155,7 +155,7 @@ class PeerNode:
         
         peer_addr = (peer_ip, peer_port)
         self._send(packet, peer_addr)
-        print(f"[PING] Sent to {peer_id} at {peer_ip}")
+        #  print(f"[PING] Sent to {peer_id} at {peer_ip}")  COMMENTED OUT
         
         with self.lock:
             self.ping_sent[peer_id] = timestamp
@@ -166,7 +166,7 @@ class PeerNode:
         body = f"{self.ip},ok,{ping_timestamp}"
         packet = self._make_packet("PONG", body)
         self._send(packet, addr)
-        print(f"[PONG] Sent to {sender_id}")
+        #  print(f"[PONG] Sent to {sender_id}")  COMMENTED OUT
 
     # ---------- File Transfer Operations ----------
     def announce_model_meta(self, ver: str, size: int, chunks: int, sha: str):
@@ -230,7 +230,8 @@ class PeerNode:
             with self.lock:
                 self.metrics["chunks_sent"] += 1
             
-            print(f"[SEND] TYPE=MODEL_CHUNK SRC={self.id} IDX={i+1}/{total_chunks} → {addr[0]}")
+            if i % 10 == 0 or i == total_chunks - 1:
+                print(f"[SEND] TYPE=MODEL_CHUNK SRC={self.id} IDX={i+1}/{total_chunks} → {addr[0]}")
 
     def register_transfer_callback(self, version: str, callback):
         """Register a callback to be called when a transfer completes."""
@@ -394,7 +395,9 @@ class PeerNode:
             b64_data = fields.get('b64', '')
 
 
-            print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
+           # Only print every 10th or final chunk
+            if idx % 10 == 0 or idx + 1 == total:
+                print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
             
             if not version or idx < 0 or total <= 0 or not b64_data:
                 return
@@ -647,7 +650,7 @@ class PeerNode:
             threading.Thread(target=self.listener, daemon=True, name="Listener"),
             threading.Thread(target=self.broadcaster, daemon=True, name="Broadcaster"),
             threading.Thread(target=self.heartbeat, daemon=True, name="Heartbeat"),
-            threading.Thread(target=self.summary, daemon=True, name="Summary")
+            # threading.Thread(target=self.summary, daemon=True, name="Summary")  COMMENTED OUT
         ]
         
         # Add test sender thread if enabled

@@ -1,0 +1,157 @@
+
+Perfect question — you're absolutely right that all those [SYNC], [PING], [PONG], and periodic summary outputs make it hard to interact with the model prompt cleanly.
+
+Here's what you need to change to make your system match the lab's expected behavior (clean interactive prompt, quieter overlay logs).
+
+🔧 Changes Needed
+1. Reduce noisy overlay output in udp_overlay.py
+The lab expects your overlay to run quietly in the background — only showing important events (peer additions, delta transfers, errors), not every single SYNC/PING message.
+
+Edit udp_overlay.py
+Find and comment out or remove these print statements:
+
+In broadcast_sync():
+
+python
+def broadcast_sync(self):
+    """Broadcast [PEER_SYNC] message to announce presence."""
+    body = f"{self.ip},{self.port}"
+    packet = self._make_packet("PEER_SYNC", body)
+    # print(f"[SYNC] Broadcasting: {packet}")  ← COMMENT THIS OUT
+    self._send(packet, (self.broadcast_ip, PORT))
+    
+    with self.lock:
+        self.metrics["syncs_sent"] += 1
+In send_ping():
+
+python
+def send_ping(self, peer_id: str, peer_ip: str, peer_port: int):
+    """Send [PING] message to a specific peer."""
+    timestamp = int(time.time() * 1000)
+    body = f"{self.ip},{timestamp}"
+    packet = self._make_packet("PING", body)
+    
+    peer_addr = (peer_ip, peer_port)
+    self._send(packet, peer_addr)
+    # print(f"[PING] Sent to {peer_id} at {peer_ip}")  ← COMMENT THIS OUT
+    
+    with self.lock:
+        self.ping_sent[peer_id] = timestamp
+        self.metrics["pings_sent"] += 1
+In send_pong():
+
+python
+def send_pong(self, addr: tuple, ping_timestamp: int, sender_id: str):
+    """Send [PONG] message back to sender."""
+    body = f"{self.ip},ok,{ping_timestamp}"
+    packet = self._make_packet("PONG", body)
+    self._send(packet, addr)
+    # print(f"[PONG] Sent to {sender_id}")  ← COMMENT THIS OUT
+In _fragment_and_send() (only print every 10th chunk or final):
+
+python
+print(f"[SEND] TYPE=MODEL_CHUNK SRC={self.id} IDX={i+1}/{total_chunks} → {addr[0]}")
+Change to:
+
+python
+if i % 10 == 0 or i == total_chunks - 1:
+    print(f"[SEND] TYPE=MODEL_CHUNK SRC={self.id} IDX={i+1}/{total_chunks} → {addr[0]}")
+In _handle_model_chunk() (same — only print progress):
+
+python
+print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
+Change to:
+
+python
+# Only print every 10th or final chunk
+if idx % 10 == 0 or idx + 1 == total:
+    print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
+
+
+    
+2. Disable the periodic summary thread
+The summary() method prints a big metrics table every 10 seconds — that's useful for debugging but annoying during interactive use.
+
+In udp_overlay.py, in the start() method:
+
+Find:
+
+python
+threads = [
+    threading.Thread(target=self.listener, daemon=True, name="Listener"),
+    threading.Thread(target=self.broadcaster, daemon=True, name="Broadcaster"),
+    threading.Thread(target=self.heartbeat, daemon=True, name="Heartbeat"),
+    threading.Thread(target=self.summary, daemon=True, name="Summary")  ← REMOVE THIS LINE
+]
+Change to:
+
+python
+threads = [
+    threading.Thread(target=self.listener, daemon=True, name="Listener"),
+    threading.Thread(target=self.broadcaster, daemon=True, name="Broadcaster"),
+    threading.Thread(target=self.heartbeat, daemon=True, name="Heartbeat"),
+    # threading.Thread(target=self.summary, daemon=True, name="Summary")  ← COMMENTED OUT
+]
+3. Keep important messages visible
+✅ KEEP these prints (they're required by the lab):
+
+[SYNC] Added <peer> (when new peer discovered)
+[INIT] Created delta ...
+[META] Announced ...
+[SEND] / [RECV] progress messages (every 10 chunks)
+[OK] SHA verified ...
+[TEST DONE] ✔ All fragments received and verified
+[MERGE] model ... applied ✓
+✅ After These Changes
+Your output will now look like this:
+
+Startup (quiet):
+text
+[INIT] Node Pi-1 ready at 10.143.213.165:5000
+[INIT] Broadcast address: 10.143.255.255
+[START] Listener thread started
+[START] Broadcaster thread started
+[START] Heartbeat thread started
+[START] Node Pi-1 running
+[INFO] Discovery: 5s, Ping: 15s, Timeout: 30s
+
+[SYNC] Added Laptop-1 (10.143.195.178)
+
+Mode: [t]rain / [q]uery / [x]exit: 
+During delta transfer:
+text
+> q
+Ask your question: What is Python?
+[MODEL] Python is a programming language
+Is this correct? (y/n): n
+Enter correct answer: Python is a high-level programming language
+[UPDATE] loss=0.0234
+[INIT] Created delta delta_v1763951000 (145000 bytes, 4 chunks)
+[META] Announcing delta delta_v1763951000 ...
+[SEND] TYPE=MODEL_CHUNK SRC=Pi-1 IDX=1/4 → 10.143.195.178
+[SEND] TYPE=MODEL_CHUNK SRC=Pi-1 IDX=4/4 → 10.143.195.178
+[BROADCAST] Delta delta_v1763951000 sent to 1 peer(s)
+
+Mode: [t]rain / [q]uery / [x]exit:
+On the laptop (receiver):
+text
+[META] Pi-1 announces delta_v1763951000: 145000 bytes, 4 chunks
+[RECV] TYPE=MODEL_CHUNK VER=delta_v1763951000 IDX=1/4
+[RECV] TYPE=MODEL_CHUNK VER=delta_v1763951000 IDX=4/4
+[REASSEMBLE] Starting reassembly for delta_v1763951000...
+[OK] SHA verified for delta_v1763951000
+[TEST DONE] ✔ All fragments received and verified for delta_v1763951000
+[SAVE] Delta delta_v1763951000 saved to received_deltas\delta_v1763951000.pt
+[MERGE] model delta_v1763951000 applied ✓ (742 layers)
+
+Mode: [t]rain / [q]uery / [x]exit:
+📝 Summary of Changes
+File	Change	Why
+udp_overlay.py → broadcast_sync()	Comment out [SYNC] Broadcasting print	Too noisy
+udp_overlay.py → send_ping()	Comment out [PING] Sent print	Too noisy
+udp_overlay.py → send_pong()	Comment out [PONG] Sent print	Too noisy
+udp_overlay.py → _fragment_and_send()	Only print every 10th chunk	Reduce spam
+udp_overlay.py → _handle_model_chunk()	Only print every 10th chunk	Reduce spam
+udp_overlay.py → start()	Disable summary thread	Removes periodic table dumps
+Keep:	[SYNC] Added, [INIT], [META], [OK], [MERGE]	Lab requirements
+Make these changes to both your Pi and laptop copies of udp_overlay.py, then restart both nodes — your interactive experience will be much cleaner and match the lab's expected demonstration output! 🎯
