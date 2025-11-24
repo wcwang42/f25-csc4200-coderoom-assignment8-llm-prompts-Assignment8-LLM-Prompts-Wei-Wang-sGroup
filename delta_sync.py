@@ -11,7 +11,7 @@ import torch
 import hashlib
 import tempfile
 import time
-from udp_overlay import PeerNode   # only this import is required
+from udp_overlay import PeerNode, MAX_UDP   
 
 
 # ------------------------------------------------------------
@@ -44,7 +44,7 @@ def broadcast_delta(node: PeerNode, path: str, sha: str, size: int):
     broadcast_file_to_all_peers() methods.
     """
     version = f"delta_v{int(time.time())}"
-    total_chunks = (size + node.MAX_UDP - 1) // node.MAX_UDP
+    total_chunks = (size + MAX_UDP - 1) // MAX_UDP
 
     print(f"[INIT] Created delta {version} ({size} bytes, {total_chunks} chunks)")
     print(f"[META] Announcing delta {version} ...")
