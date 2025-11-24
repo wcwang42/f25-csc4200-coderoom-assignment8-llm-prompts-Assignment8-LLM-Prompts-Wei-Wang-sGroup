@@ -59,3 +59,6 @@ Traceback (most recent call last):
 ValueError: Could not find GPT2LMHeadModel neither in <module 'transformers.models.gpt2' from '/home/pi/.local/lib/python3.9/site-packages/transformers/models/gpt2/__init__.py'> nor in <module 'transformers' from '/home/pi/.local/lib/python3.9/site-packages/transformers/__init__.py'>!
 pi@raspberrypi:~/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup $ 
 
+
+
+python3 -c "from transformers import GPT2LMHeadModel; print('GPT2 model class found ✓')"
