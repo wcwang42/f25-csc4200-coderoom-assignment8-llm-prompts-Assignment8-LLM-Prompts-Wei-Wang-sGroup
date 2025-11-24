@@ -126,7 +126,7 @@ class PeerNode:
             calculated_crc = self._calculate_crc32(data)
             return calculated_crc.lower() == received_crc.lower()
         except Exception as e:
-            print(f"[ERROR] CRC verification failed: {e}")
+            # print(f"[ERROR] CRC verification failed: {e}") COMMENTED OUT
             return False
 
     def _send(self, data: str, addr: tuple):
