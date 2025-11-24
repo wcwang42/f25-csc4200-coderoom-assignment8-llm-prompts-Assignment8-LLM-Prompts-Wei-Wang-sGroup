@@ -393,7 +393,6 @@ class PeerNode:
             total = int(fields.get('total', 0))
             b64_data = fields.get('b64', '')
 
-
             print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
             
             if not version or idx < 0 or total <= 0 or not b64_data:
@@ -434,6 +433,7 @@ class PeerNode:
             print(f"[ERROR] Failed to handle MODEL_CHUNK: {e}")
 
     def _reassemble_and_verify(self, version: str):
+        print(f"[DEBUG] reassemble_and_verify triggered for {version}")
         """Reassemble complete file and verify integrity."""
         try:
             # Copy buffer data while holding lock briefly
