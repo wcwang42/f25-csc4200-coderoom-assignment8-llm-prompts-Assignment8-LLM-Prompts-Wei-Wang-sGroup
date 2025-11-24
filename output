@@ -1,0 +1,43 @@
+python3 prompt_node.py Pi-1
+[INIT] Node Pi-1 ready at 10.143.213.165:5000
+[INIT] Broadcast address: 10.143.255.255
+[START] Listener thread started
+[START] Broadcaster thread started
+[SYNC] Broadcasting: [PEER_SYNC]|Pi-1|1|1763949058334|0|3|10.143.213.165,5000|66eef4ce
+[START] Heartbeat thread started
+[START] Summary thread started
+[START] Node Pi-1 running
+[INFO] Discovery: 5s, Ping: 15s, Timeout: 30s
+
+tokenizer_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 26.0/26.0 [00:00<00:00, 926B/s]
+config.json: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 662/662 [00:00<00:00, 39.5kB/s]
+vocab.json: 899kB [00:00, 7.48MB/s]
+merges.txt: 456kB [00:00, 11.4MB/s]
+special_tokens_map.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 90.0/90.0 [00:00<00:00, 20.1kB/s]
+Traceback (most recent call last):
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 741, in getattribute_from_module
+    return getattribute_from_module(transformers_module, attr)
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 745, in getattribute_from_module
+    raise ValueError(f"Could not find {attr} in {transformers_module}!")
+ValueError: Could not find GPT2LMHeadModel in <module 'transformers' from '/home/pi/.local/lib/python3.9/site-packages/transformers/__init__.py'>!
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/prompt_node.py", line 175, in <module>
+    main(node_id, debug)
+  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/prompt_node.py", line 120, in main
+    model, tok = load_model()
+  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/prompt_node.py", line 29, in load_model
+    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to(DEVICE)
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 601, in from_pretrained
+    model_class = _get_model_class(config, cls._model_mapping)
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 394, in _get_model_class
+    supported_models = model_mapping[type(config)]
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 807, in __getitem__
+    return self._load_attr_from_module(model_type, model_name)
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 821, in _load_attr_from_module
+    return getattribute_from_module(self._modules[module_name], attr)
+  File "/home/pi/.local/lib/python3.9/site-packages/transformers/models/auto/auto_factory.py", line 743, in getattribute_from_module
+    raise ValueError(f"Could not find {attr} neither in {module} nor in {transformers_module}!")
+ValueError: Could not find GPT2LMHeadModel neither in <module 'transformers.models.gpt2' from '/home/pi/.local/lib/python3.9/site-packages/transformers/models/gpt2/__init__.py'> nor in <module 'transformers' from '/home/pi/.local/lib/python3.9/site-packages/transformers/__init__.py'>!
