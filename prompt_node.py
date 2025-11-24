@@ -14,7 +14,7 @@ Dependencies:
 
 import time, threading, torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from udp_overlay import PeerNode, BROADCAST_IP, PORT
+from udp_overlay import PeerNode
 from delta_sync import export_delta, broadcast_delta, apply_incoming_deltas
 
 
