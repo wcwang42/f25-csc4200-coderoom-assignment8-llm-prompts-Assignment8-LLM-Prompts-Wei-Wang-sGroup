@@ -398,6 +398,8 @@ class PeerNode:
             if not version or idx < 0 or total <= 0 or not b64_data:
                 return
             
+            print(f"[DEBUG] Entering _handle_model_chunk for {sender_id}, fields={body[:60]}...")
+
             with self.lock:
                 if version not in self._model_buffers:
                     self._model_buffers[version] = {
@@ -417,6 +419,8 @@ class PeerNode:
                 
                 buffer = self._model_buffers[version]
                 received_chunks = len(buffer["parts"])
+
+                print(f"[DEBUG] {version}: total={buffer.get('total')}  received={received_chunks}")
                 
                 if received_chunks % 10 == 0 or received_chunks == buffer["total"]:
                     print(f"[RECV] {version} progress: {received_chunks}/{buffer['total']} chunks")
@@ -425,6 +429,8 @@ class PeerNode:
                 is_complete = received_chunks == buffer["total"]
             
             # Reassemble outside of lock to avoid blocking other operations
+            if is_complete:
+                print(f"[DEBUG] Trigger condition met for {version}")
             if is_complete:
                 print(f"[DEBUG] All {received_chunks}/{buffer['total']} chunks received for {version}, starting reassembly thread")
                 # Use a thread to handle reassembly so we don't block the listener
