@@ -17,12 +17,12 @@ import tempfile
 from typing import Tuple, Optional
 
 # ---------- Global Configuration ----------
-PORT = 5000
+PORT = 5055
 SYNC_INTERVAL = 5
 PING_INTERVAL = 15
 PING_TIMEOUT = 3
 REMOVE_TIMEOUT = 30
-MAX_UDP = 44000  # Maximum raw binary bytes per chunk (before Base64 encoding)
+MAX_UDP = 4096  # Maximum raw binary bytes per chunk (before Base64 encoding)
 
 
 class PeerNode:
@@ -205,7 +205,7 @@ class PeerNode:
             print(f"[TRANSFER] Sending {ver} to {peer_id} at {peer_addr[0]}")
             self._fragment_and_send(ver, filepath, peer_addr)
             count += 1
-            time.sleep(0.1)  # Small delay between peers to avoid overwhelming network
+            time.sleep(0.5)  # Small delay between peers to avoid overwhelming network
         
         return count
 
@@ -226,7 +226,7 @@ class PeerNode:
             pkt = self._make_packet("MODEL_CHUNK", body)
             
             self._send(pkt, addr)
-            time.sleep(0.02)   # 20 ms pause between chunks
+            time.sleep(0.05)   # 20 ms pause between chunks
             
             with self.lock:
                 self.metrics["chunks_sent"] += 1
