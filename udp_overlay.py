@@ -426,6 +426,7 @@ class PeerNode:
             
             # Reassemble outside of lock to avoid blocking other operations
             if is_complete:
+                print(f"[DEBUG] All {received_chunks}/{buffer['total']} chunks received for {version}, starting reassembly thread")
                 # Use a thread to handle reassembly so we don't block the listener
                 threading.Thread(
                     target=self._reassemble_and_verify,
@@ -433,6 +434,7 @@ class PeerNode:
                     daemon=True,
                     name=f"Reassemble-{version}"
                 ).start()
+
                     
         except Exception as e:
             print(f"[ERROR] Failed to handle MODEL_CHUNK: {e}")
