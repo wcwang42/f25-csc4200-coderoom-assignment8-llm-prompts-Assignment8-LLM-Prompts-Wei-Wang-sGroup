@@ -17,7 +17,7 @@ import tempfile
 from typing import Tuple, Optional
 
 # ---------- Global Configuration ----------
-PORT = 5055
+PORT = 5000
 SYNC_INTERVAL = 5
 PING_INTERVAL = 15
 PING_TIMEOUT = 3
