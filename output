@@ -62,3 +62,8 @@ pi@raspberrypi:~/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assign
 
 
 python3 -c "from transformers import GPT2LMHeadModel; print('GPT2 model class found ✓')"
+
+pi@raspberrypi:~/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup $ python3 -c "from transformers import GPT2LMHeadModel; print('GPT2 model class found ✓')"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'GPT2LMHeadModel' from 'transformers' (/home/pi/.local/lib/python3.9/site-packages/transformers/__init__.py)
