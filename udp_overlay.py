@@ -242,7 +242,7 @@ class PeerNode:
         """Parse and process incoming UDP packet."""
         try:
             if not self._verify_crc32(msg):
-                print(f"[ERROR] Invalid CRC from {addr}")
+                # print(f"[ERROR] Invalid CRC from {addr}") COMMENTED OUT
                 return
             
             msg_without_crc = msg.rsplit('|', 1)[0]
