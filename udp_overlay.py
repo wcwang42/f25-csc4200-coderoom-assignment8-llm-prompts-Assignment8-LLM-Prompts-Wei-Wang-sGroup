@@ -230,7 +230,6 @@ class PeerNode:
             with self.lock:
                 self.metrics["chunks_sent"] += 1
             
-            if i % 10 == 0 or i == total_chunks - 1:
                 print(f"[SEND] TYPE=MODEL_CHUNK SRC={self.id} IDX={i+1}/{total_chunks} → {addr[0]}")
 
     def register_transfer_callback(self, version: str, callback):
@@ -395,9 +394,7 @@ class PeerNode:
             b64_data = fields.get('b64', '')
 
 
-           # Only print every 10th or final chunk
-            if idx % 10 == 0 or idx + 1 == total:
-                print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
+            print(f"[RECV] TYPE=MODEL_CHUNK VER={version} IDX={idx+1}/{total}")
             
             if not version or idx < 0 or total <= 0 or not b64_data:
                 return
