@@ -226,7 +226,7 @@ class PeerNode:
             pkt = self._make_packet("MODEL_CHUNK", body)
             
             self._send(pkt, addr)
-            time.sleep(0.05)   # 20 ms pause between chunks
+            time.sleep(0.1)   # 20 ms pause between chunks
             
             with self.lock:
                 self.metrics["chunks_sent"] += 1
