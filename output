@@ -1,4 +1,4 @@
-python3 prompt_node.py Pi-1
+pi@raspberrypi:~/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup $ python3 prompt_node.py Pi-1
 [INIT] Node Pi-1 ready at 10.143.213.165:5000
 [INIT] Broadcast address: 10.143.255.255
 [START] Listener thread started
@@ -10,22 +10,20 @@ python3 prompt_node.py Pi-1
 /home/pi/.local/lib/python3.9/site-packages/huggingface_hub/file_download.py:942: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
   warnings.warn(
 
-Mode: [t]rain / [q]uery / [x]exit: q
-Ask your question: hi
+Mode: [t]rain / [q]uery / [x]exit: [SYNC] Added Laptop-1 (10.143.195.178)
+q
+Ask your question: how many fingers are on a hand?
 Using pad_token, but it is not set yet.
-[MODEL] vendors Habit ESVRocket pawn reborn
+[MODEL] hauled heirdit Participation circumcised credibility
 Is this correct? (y/n): n
-Enter correct answer: hi!
-[UPDATE] loss=10.8269
+Enter correct answer: 5
+[UPDATE] loss=10.8285
+[INIT] Created delta delta_v1763952630 (409157 bytes, 10 chunks)
+[META] Announcing delta delta_v1763952630 ...
+[META] Announced delta_v1763952630: 409157 bytes → 10 chunks, SHA=2e7e3038c2a604afd418507ffb09ee4375cd05ca7a20ffc1844b4e4c4c0a105a
+[TRANSFER] Sending delta_v1763952630 to Laptop-1 at 10.143.195.178
+[SEND] TYPE=MODEL_CHUNK SRC=Pi-1 IDX=1/10 → 10.143.195.178
+[SEND] TYPE=MODEL_CHUNK SRC=Pi-1 IDX=10/10 → 10.143.195.178
+[BROADCAST] Delta delta_v1763952630 sent to 1 peer(s)
 
-[STOP] Shutting down node Pi-1
-[STOP] Node Pi-1 stopped cleanly
-[EXIT] Node stopped.
-Traceback (most recent call last):
-  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/prompt_node.py", line 175, in <module>
-    main(node_id, debug)
-  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/prompt_node.py", line 158, in main
-    broadcast_delta(node, path, sha, size)
-  File "/home/pi/assignent-8/f25-csc4200-coderoom-assignment8-llm-prompts-Assignment8-LLM-Prompts-Wei-Wang-sGroup/delta_sync.py", line 47, in broadcast_delta
-    total_chunks = (size + node.MAX_UDP - 1) // node.MAX_UDP
-AttributeError: 'PeerNode' object has no attribute 'MAX_UDP'
+Mode: [t]rain / [q]uery / [x]exit: 
