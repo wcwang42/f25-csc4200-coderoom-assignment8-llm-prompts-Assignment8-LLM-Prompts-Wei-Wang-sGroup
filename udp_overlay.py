@@ -407,6 +407,11 @@ class PeerNode:
                         "sender": sender_id
                     }
                 
+                else:
+    # Preserve total and sha256 that came from META
+                    existing = self._model_buffers[version]
+                    existing["total"] = existing.get("total", total)
+
                 self._model_buffers[version]["parts"][idx] = b64_data
                 self.metrics["chunks_received"] += 1
                 
